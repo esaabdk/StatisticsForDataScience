@@ -1,0 +1,504 @@
+---
+title: "Project 1 and 2"
+author: "Rajkumar"
+date: "December 1, 2018"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+##Ethereum:
+
+Ethereum is a decentralized network of computers with two basic functions.
+They are: blockchain that can record transactions, and a virtual machine that can produce smart contracts.
+Because of these two functions, Ethereum is able to support decentralized applications (DApps). These DApps are built on the existing Ethereum blockchain, piggybacking off of its underlying technology. In return, Ethereum charges developers for the computing power in their network, which can only be paid in Ether, the only inter-platform currency.
+
+##ERC20 tokens:
+
+ERC-20 tokens are tokens designed and used solely on the Ethereum platform.
+They follow a list of standards so that they can be shared, exchanged for other tokens, or transferred to a crypto-wallet.
+The Ethereum community created these standards with three optional rules, and six mandatory.
+Optional: Token Name,Symbol,Decimal (up to 18)
+Mandatory: totalSupply, balanceOf, transfer, transferFrom, approve, allowance.
+
+## Primary token I worked on is VeChain Token:
+VeChain Token (VET) is the "Smart Money" or "Smart Value" in VeChainThor Ecosystem which is programmable and executable in the smart contracts to carry on value transferring along with commercial activities running on the VeChainThor Blockchain. Besides that, VeChain Token (VET) can be discovered as a key element to build up the links among dots in the ecosystem.
+
+The VeChainThor Blockchain is the platform to carry out this future ecosystem with robust blockchain core infrastructure, matching infrastructure services, proper governance and economic design, growing community and business engagement. VeChain Token (VET) and VeChainThor Energy a.k.a VeThor (VTHO), carrying the value transfers and executing transactions on the VeChainThor Blockchain network.
+The vision of VeChain and the VeChainThor Blockchain is to build a trust-free and distributed business ecosystem platform to enable transparent information flow, efficient collaboration, and high-speed value transfers.
+
+## Token Selection
+
+Token used is networkvechainTX.txt
+
+##Load TokenData
+
+Here we are loading the data from the given file path and renamed the columns values.
+
+```{r}
+
+networkvechainTX_raj <- read.table("C:/Users/RAJKUMAR/Desktop/Fall18/Stats/Project/Ethereum token graphs/networkvechainTX_raj.txt", quote="\"", comment.char="")
+
+colnames(networkvechainTX_raj) = c ("fromNodeID","toNodeID","unixTime","tokenAmount")
+head(networkvechainTX_raj)
+
+```
+
+
+## Finding outliers
+
+We are finding the outlier amounts which are bigger than the total amount of the token. For the vechain token, the maximum value possible is 86712634466*(10^18). Hence, I used this value to find out the outliers.
+
+
+```{r}
+max_value = 86712634466*(10^18)
+outliers = networkvechainTX_raj[(networkvechainTX_raj$tokenAmount> max_value),]
+head (outliers)
+```
+
+# Total number of outliers
+
+```{r}
+message("Total number of outliers: ", length(outliers))
+```
+# Number of users involved in the transactions:
+
+```{r}
+users = c(outliers$fromNodeID,outliers$toNodeID)
+unique_users = unique(users)
+message(length(users), " users are involved in the outlier transactions")
+```
+
+# Remove Outliers
+
+I am removing the outliers which are greater than max amount of the token.
+
+```{r}
+networkvechainTX_raj = networkvechainTX_raj[!(networkvechainTX_raj$tokenAmount> max_value),]
+
+users = c(networkvechainTX_raj$fromNodeID,networkvechainTX_raj$toNodeID)
+unique_users = unique(users)
+```
+
+## Question 1
+
+Find the distribution of how many times a user 1 - buys, 2 - sells a token. Which discrete distribution type fits these distributions best? Estimate distribution parameters.
+
+## Find Sells distribution
+
+Here, I am trying to find the sells distribution from the given data.Hence, I am using fromNodeID column to find the sells distribution. In order to find the corresponding distribution, I am trying to fit the sells distribution to Poisson and exponential, since the sells distribution resembles to fit those distributions.
+
+
+```{r}
+
+
+count = table(networkvechainTX_raj$fromNodeID)
+count_df = as.data.frame(count)
+colnames(count_df) = c('SellId','Freq')
+head(count_df)
+
+
+sell_count = table(count_df$Freq)
+sell_count_df = as.data.frame(sell_count)
+colnames(sell_count_df) = c('NoOfSells','FreqOfSells')
+head(sell_count_df)
+
+
+barplot(sell_count_df$FreqOfSells, names.arg=sell_count_df$NoOfSells, ylab="FreqOfSells",xlab="NoOfSells", xlim=c(0,20),ylim=c(0,40000))
+
+
+library(fitdistrplus)
+
+
+message("Mean of the frequency of number of sells is ", mean(sell_count_df$FreqOfSells))
+
+
+
+sell_fit_exp = fitdist(sell_count_df$FreqOfSells,"exp",method="mle")
+
+sell_fit_exp
+
+Rate_exp = 0.002554203
+
+Mean_exp = 1/Rate_exp
+
+message("Mean from Exponential is ", Mean_exp)
+
+plot(sell_fit_exp)
+
+sell_fit_pois = fitdist(sell_count_df$FreqOfSells,"pois",method="mle")
+
+sell_fit_pois
+
+plot(sell_fit_pois)
+
+message("Mean of the data " ,mean(sell_count_df$FreqOfSells) )
+message("Mean from exponenetial distribution is ", Mean_exp)
+message("Mean from Poisson distribution is ",391.5116 )
+
+
+
+
+```
+
+The mean od both exponential and poisson matches the mean of sells distribution. I would result to exponential distribution.
+
+## Find Buys distribution
+
+Here, I am trying to find the buys distribution from the given data.Hence, I am using toNodeID column to find the sells distribution. In order to find the corresponding distribution, I am trying to fit the resulting distribution to Poisson and exponential, since the buys distribution resembles to fit those distributions.
+
+
+```{r}
+count = table(networkvechainTX_raj$toNodeID)
+count_df = as.data.frame(count)
+colnames(count_df) = c('BuyersId','Freq')
+head(count_df)
+
+buy_count = table(count_df$Freq)
+buy_count_df = as.data.frame(buy_count)
+colnames(buy_count_df) = c('NoOfBuys','FreqOfBuys')
+head(buy_count_df)
+
+
+barplot(buy_count_df$FreqOfBuys, names.arg=buy_count_df$NoOfBuys, ylab="FreqOfBuyss",xlab="NoOfBuys", xlim=c(0,20),ylim=c(0,70000))
+
+message("Mean of the frequency of number of Buys is ", mean(buy_count_df$FreqOfBuys))
+
+#library(fitdistrplus)
+
+buy_fit_exp = fitdist(buy_count_df$FreqOfBuys,"exp",method="mme")
+
+buy_fit_exp
+
+
+plot(buy_fit_exp)
+
+buy_fit_pois = fitdist(buy_count_df$FreqOfBuys,"pois",method="mme")
+
+buy_fit_pois
+
+plot(buy_fit_pois)
+
+message("Mean of the data " ,mean(buy_count_df$FreqOfBuys) )
+message("Mean from exponenetial distribution is ", 1/0.001286507)
+message("Mean from Poisson distribution is ",777.2985 )
+
+
+
+
+
+```
+
+
+Both exponential and poisson matches with the buys distribution mean. I would result to exponential distribution.
+
+
+## Question 2
+
+How can we create layers of transactions with increasing amounts? This descriptive statistic is similar to bin selection in histograms. For example, we could choose layer1 as those transactions that involve 0.01×maxt in amount. Find a good value for the number of layers and justify your choice.
+
+Find an algorithm to compute the correlation of price data with each of the layers (hint: start by looking at Pearson correlation).
+
+
+## Loading data and preprocessing.
+
+Again, we are loading the datasets and removing the outliers.
+
+```{r}
+
+networkvechainTX_raj <- read.table("C:/Users/RAJKUMAR/Desktop/Fall18/Stats/Project/Ethereum token graphs/networkvechainTX_raj.txt", quote="\"", comment.char="")
+colnames(networkvechainTX_raj) = c ("fromNodeID","toNodeID","unixTime","tokenAmount")
+head(networkvechainTX_raj)
+vechain <- read.delim("C:/Users/RAJKUMAR/Desktop/Fall18/Stats/Project/tokenPrices/vechain")
+head(vechain)
+```
+
+
+
+```{r}
+max_value = 86712634466*(10^18)
+networkvechainTX_raj = networkvechainTX_raj[!(networkvechainTX_raj$tokenAmount> max_value),]
+```
+
+
+## Changing unix time to Datefomat in tokenData and dateformat in vechain
+
+```{r}
+date_val = as.Date(as.POSIXct(networkvechainTX_raj$unixTime, origin="1970-01-01"))
+networkvechainTX_raj$date_value = date_val
+networkvechainTX_raj$unixTime <- NULL
+
+date_value = as.Date(vechain$Date,format='%m/%d/%Y')
+vechain$date_value = date_value
+vechain$Date <- NULL
+
+vechain = transform(vechain, date_value=as.factor(date_value))
+networkvechainTX_raj = transform(networkvechainTX_raj, date_value=as.factor(date_value))
+
+head(networkvechainTX_raj)
+
+head(vechain)
+```
+
+## Creating Layers in the transactions
+
+Here,layers are created based on the increasing order of transaction amounts and I choose 15 layers by ensuring atleast 17250 transactions per layer. I used 15 layers since the correlation between token amount vs price decreases with increasing amount. 15 layers showed better result in the rate of decrease. 
+
+First, we find the frequency of the transaction amounts in the tokenData and sort based on the transaction amount.Then we split the tokenData by ensuring atleast 17250 transactions per layer which yields 15 layers in total.
+
+The feature we are interested in each layer for correlation is the number of transactions for the given date. Hence we are finding the frequency of transactions for a given date in each layer.
+```{r}
+
+#Finding the frequency of transaction amounts and ordering them (increasing order) based on the tokenAmounts.
+token_Amount_Frequency=table(networkvechainTX_raj$tokenAmount)
+token_Amount_Frequency_df= as.data.frame(token_Amount_Frequency)
+colnames(token_Amount_Frequency_df)=c("tokenAmount","Frequency")
+token_Amount_Frequency_df= token_Amount_Frequency_df[order(token_Amount_Frequency_df$tokenAmount),]
+
+head(token_Amount_Frequency_df)
+
+#spliting the transactions by ensuring atleast 17250 in each of the 15 layers.
+df=token_Amount_Frequency_df
+count =0;j=1;k=0;s=0;layers=list();sum=0;
+for(i in df$Frequency)
+{
+  count=count+i;
+  k=k+1;
+  if(count>=17250)
+  {
+    #print(count);
+    layers[[j]]=df[s:k,];
+    j=j+1;
+    s=k+1;
+    count=0;
+  }
+}
+#print(count)
+layers[[j]]=df[s:k,]
+
+
+for(i in 1:length(layers))
+{
+  print(paste("Layer",i))
+  
+  print(paste("Min transaction tokenAmount is ",head((layers[[i]]$tokenAmount),1)))
+ 
+  print(paste("Max transaction tokenAmount is " ,tail((layers[[i]]$tokenAmount),1)))
+  print(paste("No of transactions is ",sum(layers[[i]]$Frequency)))
+  cat("\n")
+}
+
+#Finding frequency of transactions for a given date in each layer.
+layer_transaction=list()
+i=1;
+for(j in 1:length(layers))
+{
+layer_transaction[[i]] = networkvechainTX_raj[is.element(networkvechainTX_raj$tokenAmount,layers[[j]]$tokenAmount),]
+layer_transaction[[i]] = table(layer_transaction[[i]]$date_value)
+layer_transaction[[i]] = as.data.frame(layer_transaction[[i]])
+colnames(layer_transaction[[i]]) = c("date_value","no_of_transactions")
+i=i+1;
+}
+
+head(layer_transaction[[1]])
+```
+
+## Finding the correlation between the price and no of transactions in each layer.
+
+First, we are doing inner join between price data with each layer by date to create the dateframe for finding the correlation.
+
+Then, we normalize the Close price and no of transactions columns to easily plot the correlation between them.
+
+We used "spearman" correlation algorithm to find the correlation which yields better result than other algorithms like kendall and Pearson. 
+
+```{r}
+Merged_transaction_price=list()
+i=1
+for(j in 1:length(layer_transaction))
+{
+Merged_transaction_price[[i]] =  merge(x=vechain, y=layer_transaction[[j]], by="date_value")
+i=i+1;
+}
+
+for(j in 1:length(layer_transaction))
+{
+  s= sum(Merged_transaction_price[[j]]$Close)
+  ss= sum(Merged_transaction_price[[j]]$no_of_transactions)
+  Merged_transaction_price[[j]]$Close =Merged_transaction_price[[j]]$Close/s
+  Merged_transaction_price[[j]]$no_of_transactions = Merged_transaction_price[[j]]$no_of_transactions/ss
+plot(Merged_transaction_price[[j]]$date_value, Merged_transaction_price[[j]]$no_of_transactions,xlab='Date',type="b",col="red",main=paste('Layer',j , "-> dotted: no_of_transactions",", Blue line: Close price"))
+lines(Merged_transaction_price[[j]]$date_value, Merged_transaction_price[[j]]$Close,col="blue")
+
+}
+
+for(j in 1:length(layer_transaction))
+{
+ 
+print( paste('Layer',j,'Correlation',cor(Merged_transaction_price[[j]]$no_of_transactions,Merged_transaction_price[[j]]$Close,method="spearman")))
+
+cat("\n")
+}
+
+
+```
+##Project 2 : Multiple linear regression
+
+I have taken layer 3 data for creating multiple linear regression since it has high correlation value than any other layers. To extract features from that layer, I have considered
+3 features from ethereum dataset, percentage of difference in the number of transactions,
+percentage of difference in the number of unique buyers and percentage of difference in the
+number of unique seller on t-1th day. Also, I have extracted 2 more features from price
+dataset, percentage of difference in the Open price and percentage of difference in Volume.
+
+```{r}
+Layer3_dt = (networkvechainTX_raj[is.element(networkvechainTX_raj$tokenAmount,layers[[3]]$tokenAmount),])
+library("dplyr", lib.loc="~/R/win-library/3.4")
+b = summarise(group_by(Layer3_dt, fromNodeID, date_value),count =n())
+c = summarise(group_by(Layer3_dt, toNodeID, date_value),count =n())
+b = as.data.frame(b)
+c = as.data.frame(c)
+no_of_transaction = table(Layer3_dt$date_value)
+no_of_uniqueBuyers = table(c$date_value)
+no_of_uniqueSellers = table(b$date_value)
+
+no_of_transaction = as.data.frame(no_of_transaction)
+colnames(no_of_transaction) = c("date_value","no_of_transactions")
+
+head(no_of_transaction)
+
+no_of_uniqueBuyers = as.data.frame(no_of_uniqueBuyers)
+colnames(no_of_uniqueBuyers) = c("date_value","no_of_uniqueBuyers")
+
+head(no_of_uniqueBuyers)
+
+no_of_uniqueSellers = as.data.frame(no_of_uniqueSellers)
+colnames(no_of_uniqueSellers) = c("date_value","no_of_uniqueSellers")
+
+head(no_of_uniqueSellers)
+
+Merged_Features = merge(x = no_of_transaction,y=no_of_uniqueBuyers,by="date_value")
+Merged_Features = merge(x = Merged_Features,y=no_of_uniqueSellers,by="date_value")
+Merged_Features = merge(x = Merged_Features,y=vechain,by="date_value")
+
+head(Merged_Features)
+
+```
+
+Calculating the Return price from the price data.I am using Close price here and extracting the features from price. Also, merging with the features data.
+
+```{r}
+Return_price = list()
+Return_price[1] = Merged_Features$Open[1]
+
+Merged_Features$Return_Val[1] = Merged_Features$Open[1]
+for( i in 2 :length(Merged_Features$Open))
+{
+Return_price[[i]] = (Merged_Features$Open[i]- Merged_Features$Open[i-1])/Merged_Features$Open[i-1]
+Merged_Features$Return_Val[i] =Return_price[[i]] 
+}
+
+Increase_In_Transaction = list()
+Increase_In_Transaction[1] = Merged_Features$no_of_transactions[1]
+Increase_In_Transaction[2] = Merged_Features$no_of_transactions[2]
+Merged_Features$Increase_In_Transaction[1] = Merged_Features$no_of_transactions[1]
+Merged_Features$Increase_In_Transaction[2] = Merged_Features$no_of_transactions[2]
+for( i in 3 :length(Merged_Features$no_of_transactions))
+{
+Increase_In_Transaction[[i]] = (Merged_Features$no_of_transactions[i-1]- Merged_Features$no_of_transactions[i-2])/Merged_Features$no_of_transactions[i-2]
+Merged_Features$Increase_In_Transaction[i] =Increase_In_Transaction[[i]] 
+}
+
+Increase_In_Buyers = list()
+Increase_In_Buyers[1] = Merged_Features$no_of_uniqueBuyers[1]
+Merged_Features$Increase_In_Buyers[1] = Merged_Features$no_of_uniqueBuyers[1]
+Increase_In_Buyers[2] = Merged_Features$no_of_uniqueBuyers[2]
+Merged_Features$Increase_In_Buyers[1] = Merged_Features$no_of_uniqueBuyers[2]
+for( i in 3 :length(Merged_Features$no_of_uniqueBuyers))
+{
+Increase_In_Buyers[[i]] = (Merged_Features$no_of_uniqueBuyers[i-1]- Merged_Features$no_of_uniqueBuyers[i-2])/Merged_Features$no_of_uniqueBuyers[i-2]
+Merged_Features$Increase_In_Buyers[i] =Increase_In_Buyers[[i]] 
+}
+
+
+Increase_In_Sellers = list()
+Increase_In_Sellers[1] = Merged_Features$no_of_uniqueSellers[1]
+Merged_Features$Increase_In_Sellers[1] = Merged_Features$no_of_uniqueSellers[1]
+Increase_In_Sellers[2] = Merged_Features$no_of_uniqueSellers[2]
+Merged_Features$Increase_In_Sellers[2] = Merged_Features$no_of_uniqueSellers[2]
+for( i in 3 :length(Merged_Features$no_of_uniqueSellers))
+{
+Increase_In_Sellers[[i]] = (Merged_Features$no_of_uniqueSellers[i-1]- Merged_Features$no_of_uniqueSellers[i-2])/Merged_Features$no_of_uniqueSellers[i-2]
+Merged_Features$Increase_In_Sellers[i] =Increase_In_Sellers[[i]] 
+}
+
+Merged_Features = transform(Merged_Features,Volume = as.numeric(Volume))
+
+
+Increase_In_Vol = list()
+Increase_In_Vol[1] = Merged_Features$Volume[1]
+Merged_Features$Increase_In_Vol[1] = Merged_Features$Volume[1]
+Increase_In_Vol[2] = Merged_Features$Volume[2]
+Merged_Features$Increase_In_Vol[2] = Merged_Features$Volume[2]
+for( i in 3 :length(Merged_Features$Volume))
+{
+Increase_In_Vol[[i]] = ( Merged_Features$Volume[i-1]-Merged_Features$Volume[i-2])/Merged_Features$Volume[i-2]
+Merged_Features$Increase_In_Vol[i] =Increase_In_Vol[[i]] 
+}
+
+Increase_In_Open = list()
+Increase_In_Open[1] = Merged_Features$Open[1]
+Merged_Features$Increase_In_Open[1] = Merged_Features$Open[1]
+Increase_In_Open[2] = Merged_Features$Open[2]
+Merged_Features$Increase_In_Open[2] = Merged_Features$Open[2]
+for( i in 3 :length(Merged_Features$Open))
+{
+Increase_In_Open[[i]] = ( Merged_Features$Open[i-1]-Merged_Features$Open[i-2])/Merged_Features$Open[i-2]
+Merged_Features$Increase_In_Open[i] =Increase_In_Open[[i]] 
+}
+
+
+
+
+Merged_Features$date_value <- NULL
+Merged_Features$Open <- NULL
+Merged_Features$High <- NULL
+Merged_Features$Low <- NULL
+Merged_Features$Close <- NULL
+Merged_Features$Volume <- NULL
+Merged_Features$Market.Cap <- NULL
+
+Merged_Features <- Merged_Features[!is.infinite(rowSums(Merged_Features)),]
+Merged_Features <- Merged_Features[!is.na(rowSums(Merged_Features)),]
+
+
+ml = lm(Return_Val ~ Merged_Features[,"Increase_In_Transaction"]+Merged_Features[,"Increase_In_Buyers"]+Merged_Features[,"Increase_In_Sellers"]+ Merged_Features[,"Increase_In_Vol"]+(Merged_Features[,"Increase_In_Sellers"]* Merged_Features[,"Increase_In_Vol"]),data=Merged_Features)
+summary.lm(ml)
+
+plot(ml$residuals)
+
+
+
+
+
+
+
+
+
+
+
+```
+
+
+
+# Result:
+
+From the above result, we can find that the model $R^2$ value is 0.08 which means the extracted feature doesnt yield good result. I have tried with the previous day close price return value as one of the features to improve model, but it also doesnt give better results.
+
+I have understood that the correlation between combined values of the extracted features and price return should be high to get good model. Only percentage of difference in unique seller feature from ethereum dataset, and percentage of volume change feature in price data from price dataset has good impact on the overall model.
+
+From the residual plot , we can see that errors are in few fractions since the
+output value we are interested itself is in fractions.And most of the values are missed by
+the model in fractions.
+
